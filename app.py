@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
@@ -50,8 +51,9 @@ def new_question():
 
             desc = request.form['description']
             image = request.form['image']
+            subtopic = request.form['subtopic']
 
-            q = Question(desc, image, answer.id)
+            q = Question(desc, image, answer.id, subtopic)
 
             db.session.add(q)
             db.session.commit()
@@ -125,6 +127,25 @@ def display_questions():
         errors.append("Unable to fetch from database")
 
     return render_template('display_questions.html', errors=errors, results=results)
+
+# random questions
+@app.route('/questions/random/<subtopic_id>', methods=['GET', 'POST'])
+def random_questions(subtopic_id):
+    errors = []
+    results = {}
+    try:
+        questions = Question.query.filter_by(subtopic=subtopic_id).all()
+
+        q = random.randint(0, len(questions)-1)
+
+        results['topic'] = questions[q].subtopic
+        results['question'] = questions[q].description
+        results['answer'] = Answer.query.filter_by(id=questions[q].answer).first()
+
+    except ConnectionError:
+        errors.append("Unable to fetch from database")
+
+    return render_template('topic_question.html', errors=errors, results=results)
 
 
 if __name__ == '__main__':

@@ -34,11 +34,13 @@ class Question(db.Model):
     description = db.Column(db.String())
     image_url = db.Column(db.String())
     answer = db.Column(db.Integer, db.ForeignKey('answers.id'), nullable=False)
+    subtopic = db.Column(db.Integer, db.ForeignKey('subtopics.id'), nullable=False)
 
-    def __init__(self, description, image_url, answer):
+    def __init__(self, description, image_url, answer, subtopic):
         self.description = description
         self.image_url = image_url
         self.answer = answer
+        self.subtopic = subtopic
 
     def __repr__(self):
         return '<id {}>'.format(self.id)
