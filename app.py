@@ -109,9 +109,24 @@ def new_subtopic():
 
 
 # displaying questions
+@app.route('/questions/all', methods=['GET', 'POST'])
+def display_questions():
+    errors = []
+    results = {}
 
-# def display
-#
+    try:
+        questions = Question.query.all()
+
+        for q in questions:
+            answer = Answer.query.filter_by(id=q.id).first()
+            results[q.description] = answer.answer
+
+    except ConnectionError:
+        errors.append("Unable to fetch from database")
+
+    return render_template('display_questions.html', errors=errors, results=results)
+
+
 if __name__ == '__main__':
 
     app.run()
