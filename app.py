@@ -3,8 +3,10 @@ import random
 import requests
 from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
+from flask_restful import Resource, Api
 
 app = Flask(__name__)
+api = Api(app)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -15,27 +17,12 @@ from models import Question, Answer, Topic, Subtopic
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    errors = []
-    results = {}
-
-    if request.method == "POST":
-        # get input
-        try:
-            url = request.form['url']
-            r = requests.get(url)
-            print(r.text)
-
-        except requests.ConnectionError:
-            errors.append(
-                "Unable to get URL. Please make sure it's valid and try again."
-            )
-
-    return render_template('index.html', errors=errors, results=results)
+    return render_template('404.html')
 
 
-@app.route('/<q_id>')
-def display_question(q_id):
-    return "The question is {}.".format(q_id)
+@app.route('/<whatever>')
+def display_question(whatever):
+    return "Sorry, we don't understand your request!"
 
 
 @app.route('/questions/new', methods=['GET', 'POST'])
@@ -110,42 +97,81 @@ def new_subtopic():
     return render_template('add_subtopic.html', errors=errors, results=results)
 
 
-# displaying questions
-@app.route('/questions/all', methods=['GET', 'POST'])
-def display_questions():
-    errors = []
-    results = {}
+# fetch all topics available
+class Topics(Resource):
+    @staticmethod
+    def get():
+        results = []
+        try:
+            topics = Topic.query.all()
 
-    try:
-        questions = Question.query.all()
+            for topic in topics:
+                results.append(
+                    {
+                        'name': topic.name,
+                        'description': topic.description
+                    }
+                )
 
-        for q in questions:
-            answer = Answer.query.filter_by(id=q.id).first()
-            results[q.description] = answer.answer
+            return results
 
-    except ConnectionError:
-        errors.append("Unable to fetch from database")
+        except ConnectionError:
+            return {'error': "Unable to fetch from database"}
 
-    return render_template('display_questions.html', errors=errors, results=results)
 
-# random questions
-@app.route('/questions/random/<subtopic_id>', methods=['GET', 'POST'])
-def random_questions(subtopic_id):
-    errors = []
-    results = {}
-    try:
-        questions = Question.query.filter_by(subtopic=subtopic_id).all()
+api.add_resource(Topics, '/topics/all')
 
-        q = random.randint(0, len(questions)-1)
 
-        results['topic'] = questions[q].subtopic
-        results['question'] = questions[q].description
-        results['answer'] = Answer.query.filter_by(id=questions[q].answer).first()
+# fetch subtopics depending on a topic
+class Subtopics(Resource):
+    @staticmethod
+    def get(topic_id):
+        results = []
+        try:
+            subtopics = Subtopic.query.filter_by(topic=topic_id).all()
 
-    except ConnectionError:
-        errors.append("Unable to fetch from database")
+            for subtopic in subtopics:
+                results.append(
+                    {
+                        'name': subtopic.name,
+                        'description': subtopic.description
+                    }
+                )
 
-    return render_template('topic_question.html', errors=errors, results=results)
+            return results
+
+        except ConnectionError:
+            return {'error': "Unable to fetch from database"}
+
+
+api.add_resource(Subtopics, '/subtopics/<topic_id>')
+
+
+# random question
+class RandomQuestion(Resource):
+    @staticmethod
+    def get(subtopic_id):
+        try:
+            questions = Question.query.filter_by(subtopic=subtopic_id).all()
+
+            q = random.randint(0, len(questions) - 1)
+
+            return {'topic': questions[q].subtopic,
+                    'question': questions[q].description,
+                    'image': questions[q].image_url,
+                    'answer': Answer.query.filter_by(id=questions[q].answer).first().answer
+                    }
+
+        except ConnectionError:
+            return {'error': "Unable to fetch from database"}
+
+
+api.add_resource(RandomQuestion, '/questions/random/<subtopic_id>')
+
+
+# writing to database
+
+# add a question
 
 
 if __name__ == '__main__':
