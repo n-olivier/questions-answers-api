@@ -20,6 +20,12 @@ def index():
     return render_template('404.html')
 
 
+@app.errorhandler(404)
+def page_not_found(e):
+    # note that we set the 404 status explicitly
+    return render_template('404.html'), 404
+
+
 @app.route('/<whatever>')
 def display_question(whatever):
     return "Sorry, we don't understand your request!"
