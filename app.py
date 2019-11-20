@@ -1,9 +1,9 @@
 import os
 import random
 import requests
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from flask_restful import Resource, Api
+from flask_restful import Resource, Api, abort, reqparse
 
 app = Flask(__name__)
 api = Api(app)
@@ -15,96 +15,76 @@ db = SQLAlchemy(app)
 from models import Question, Answer, Topic, Subtopic
 
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    return render_template('404.html')
-
-
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly
     return render_template('404.html'), 404
 
 
-@app.route('/<whatever>')
-def display_question(whatever):
-    return "Sorry, we don't understand your request!"
-
-
-@app.route('/questions/new', methods=['GET', 'POST'])
+@app.route('/questions/new', methods=['POST'])
 def new_question():
-    results = {}
-    errors = []
-    if request.method == 'POST':
-        try:
-            # Save answer before to get its id
-            answer = Answer(request.form['answer'])
-            db.session.add(answer)
-            db.session.commit()
+    try:
+        content = request.get_json()
+        description = content['description']
+        image_url = content['image_url']
+        answer = content['answer']
+        subtopic = content['subtopic']
 
-            desc = request.form['description']
-            image = request.form['image']
-            subtopic = request.form['subtopic']
+        # Save answer before to get its id
+        answer = Answer(answer)
+        db.session.add(answer)
+        db.session.commit()
 
-            q = Question(desc, image, answer.id, subtopic)
+        q = Question(description, image_url, answer.id, subtopic)
 
-            db.session.add(q)
-            db.session.commit()
+        db.session.add(q)
+        db.session.commit()
 
-        except requests.ConnectionError:
-            errors.append(
-                "Unable to process your input"
-            )
+        return '', 200
 
-    return render_template(
-        'add_question.html', errors=errors, results=results
-    )
+    except requests.HTTPError:
+        return '', 400
 
 
-@app.route('/topics/new', methods=['GET', 'POST'])
+@app.route('/topics/new', methods=['POST'])
 def new_topic():
-    errors = []
-    results = {}
-    if request.method == 'POST':
+    try:
+        content = request.get_json()
+        name = content['name']
+        description = content['description']
 
-        try:
-            name = request.form['name']
-            description = request.form['description']
+        t = Topic(name, description)
 
-            t = Topic(name, description)
+        db.session.add(t)
+        db.session.commit()
 
-            db.session.add(t)
-            db.session.commit()
+        return '', 200
 
-        except requests.ConnectionError:
-            errors.append("Unable to process your input")
-
-    return render_template('add_topic.html', errors=errors, results=results)
+    except requests.HTTPError:
+        return '', 400
 
 
-@app.route('/subtopics/new', methods=['GET', 'POST'])
+@app.route('/subtopics/new', methods=['POST'])
 def new_subtopic():
-    errors = []
-    results = {}
-    if request.method == 'POST':
-        try:
-            name = request.form['name']
-            description = request.form['description']
-            topic = request.form['topic']
+    try:
+        content = request.get_json()
+        name = content['name']
+        description = content['description']
+        topic = content['topic']
 
-            st = Subtopic(name, description, topic)
+        st = Subtopic(name, description, topic)
 
-            db.session.add(st)
-            db.session.commit()
+        db.session.add(st)
+        db.session.commit()
 
-        except requests.ConnectionError:
-            errors.append("Unable to process your input")
+        return '', 200
 
-    return render_template('add_subtopic.html', errors=errors, results=results)
+    except requests.HTTPError:
+        return '', 400
 
 
 # fetch all topics available
-class Topics(Resource):
+class TopicsList(Resource):
     @staticmethod
     def get():
         results = []
@@ -118,14 +98,13 @@ class Topics(Resource):
                         'description': topic.description
                     }
                 )
-
             return results
 
         except ConnectionError:
             return {'error': "Unable to fetch from database"}
 
 
-api.add_resource(Topics, '/topics/all')
+api.add_resource(TopicsList, '/topics/all')
 
 
 # fetch subtopics depending on a topic
@@ -174,13 +153,5 @@ class RandomQuestion(Resource):
 
 api.add_resource(RandomQuestion, '/questions/random/<subtopic_id>')
 
-
-# writing to database
-
-# add a question
-
-
 if __name__ == '__main__':
-
     app.run()
-
