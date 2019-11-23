@@ -18,7 +18,7 @@ from models import Question, Answer, Topic, Subtopic
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly
-    return render_template('404.html'), 404
+    return jsonify(error=404, text=str(e)), 404
 
 
 @app.route('/questions/new', methods=['POST'])
