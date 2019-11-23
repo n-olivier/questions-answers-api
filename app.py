@@ -94,6 +94,7 @@ class TopicsList(Resource):
             for topic in topics:
                 results.append(
                     {
+                        'id': topic.id,
                         'name': topic.name,
                         'description': topic.description
                     }
@@ -118,6 +119,7 @@ class Subtopics(Resource):
             for subtopic in subtopics:
                 results.append(
                     {
+                        'id': subtopic.id,
                         'name': subtopic.name,
                         'description': subtopic.description
                     }
@@ -141,7 +143,9 @@ class RandomQuestion(Resource):
 
             q = random.randint(0, len(questions) - 1)
 
-            return {'topic': questions[q].subtopic,
+            return {
+                    'id': questions[q].id,
+                    'topic': questions[q].subtopic,
                     'question': questions[q].description,
                     'image': questions[q].image_url,
                     'answer': Answer.query.filter_by(id=questions[q].answer).first().answer
