@@ -13,6 +13,11 @@ class Topic(db.Model):
         self.description = description
 
 
+class JsonModel(object):
+    def as_dict(self):
+        return {c.name}
+
+
 class Subtopic(db.Model):
     __tablename__ = 'subtopics'
 

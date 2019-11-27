@@ -1,12 +1,16 @@
 import os
 import random
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask_restful.representations import json
+from flask import Flask, render_template, request, jsonify, make_response
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Resource, Api, abort, reqparse
 
 app = Flask(__name__)
 api = Api(app)
+CORS(app)
+
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -19,6 +23,15 @@ from models import Question, Answer, Topic, Subtopic
 def page_not_found(e):
     # note that we set the 404 status explicitly
     return jsonify(error=404, text=str(e)), 404
+
+
+@app.route('/test', methods=['GET', 'POST'])
+def test_page():
+    # note that we set the 404 status explicitly
+    return jsonify({
+        '1': 'one',
+        '2': 'two',
+    })
 
 
 @app.route('/questions/new', methods=['POST'])
@@ -99,10 +112,13 @@ class TopicsList(Resource):
                         'description': topic.description
                     }
                 )
+
             return results
 
         except ConnectionError:
-            return {'error': "Unable to fetch from database"}
+            return jsonify(
+                {'error': "Unable to fetch from database"}
+            )
 
 
 api.add_resource(TopicsList, '/topics/all')
@@ -143,13 +159,13 @@ class RandomQuestion(Resource):
 
             q = random.randint(0, len(questions) - 1)
 
-            return {
-                    'id': questions[q].id,
-                    'topic': questions[q].subtopic,
-                    'question': questions[q].description,
-                    'image': questions[q].image_url,
-                    'answer': Answer.query.filter_by(id=questions[q].answer).first().answer
-                    }
+            return jsonify({
+                'id': questions[q].id,
+                'topic': questions[q].subtopic,
+                'question': questions[q].description,
+                'image': questions[q].image_url,
+                'answer': Answer.query.filter_by(id=questions[q].answer).first().answer
+            })
 
         except ConnectionError:
             return {'error': "Unable to fetch from database"}
